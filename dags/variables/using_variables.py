@@ -2,16 +2,35 @@
 # OTTO: 123
 
 from datetime import datetime
+from datetime import timedelta
 from airflow import DAG
-from airflow.operators.bash_operator import BashOperator
+from airflow.operators.bash import BashOperator
+
+OTTO = "{{ var.value.OTTO }}"
 
 # Define the DAG
-dag = DAG("example_dag", start_date=datetime(2022, 1, 1), schedule_interval="@daily")
+dag = DAG(
+    "using_variables",
+    start_date=datetime(2022, 1, 1),
+    schedule_interval="* * * * *",  # Run every minute
+    catchup=False,
+    dagrun_timeout=timedelta(minutes=60),
+    tags=["otto", "variables"],
+    params={"example_key": "example_value"},
+)
 
-# Define a task that dynamically reads the "s3_bucket_name" variable at runtime
 task = BashOperator(
-    task_id="example_task",
+    task_id="task1",
     # Use Airflow template to get the variable value at runtime
     bash_command='echo "Value of Var OTTO: {{ var.value.OTTO }}"',
     dag=dag,
 )
+
+task2 = BashOperator(
+    task_id="task2",
+    # Use Airflow template to get the variable value at runtime
+    bash_command='echo "Value of Var OTTO: ${OTTO}"',
+    dag=dag,
+)
+
+task >> task2

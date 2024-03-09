@@ -8,27 +8,44 @@
 
 ## Before you Begin
 
-Set env var for container name:
+Set these vars before continuing:
 
 AIRFLOW_IMAGE=ottoq/airflow-basic:2.8.2
 AIRFLOW_CONTAINER=airflow-basic-282
+AIRFLOW_PORT=9001
 
 ## Build
 
-docker build -t ottoq/airflow-basic:2.8.2 .
+docker build -t $AIRFLOW_IMAGE .
+
+docker image ls
+
 
 ## Run Container
 
-docker container run --name $AIRFLOW_CONTAINER -p 9001:8080 ottoq/airflow-basic:2.8.2
+docker container run -d --name $AIRFLOW_CONTAINER -p $AIRFLOW_PORT:8080 $AIRFLOW_IMAGE
+
+docker container run -d --restart=no --name $AIRFLOW_CONTAINER -p $AIRFLOW_PORT:8080 $AIRFLOW_IMAGE
+
+docker container start $AIRFLOW_CONTAINER
 
 Now, go to: http://localhost:9001/home
 
-user: admin
+user: admin / admin
+
+
+### Remove Container
+
+docker container stop $AIRFLOW_CONTAINER; docker container rm $AIRFLOW_CONTAINER
+
+docker container ls -a
 
 
 ## Get Terminal
 
 docker exec -it $AIRFLOW_CONTAINER /bin/bash
+
+Get root shell:
 
 docker exec -it -u 0 $AIRFLOW_CONTAINER /bin/bash
 
@@ -53,6 +70,12 @@ sudo find / -type f -name "*.db"
 
 /opt/airflow/airflow.db
 
+Connect:
+
+apt-get install -y sqlite3 libsqlite3-dev
+
+sqlite3 /opt/airflow/airflow.db
+
 
 ## Deploy DAGS
 
@@ -65,6 +88,10 @@ docker cp dags/*.py $AIRFLOW_CONTAINER:/opt/airflow/dags
 Copy all dags (run from parent dir):
 
 find dags/ -type f -name "*.py" -exec sh -c 'docker exec 4fd3504382b9 mkdir -p "/opt/airflow/$(dirname "$0")" && docker cp "$0" 4fd3504382b9:/opt/airflow/"$0"' {} \;
+
+Copy the whole dags dir:
+
+docker cp ../../../../dags $AIRFLOW_CONTAINER:/opt/airflow/
 
 
 ## Deploy Plugins

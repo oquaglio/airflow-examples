@@ -34,6 +34,8 @@ RUN apt-get update -yqq && \
     locales \
     # for ps:
     procps \
+    # for sqlite3:
+    sqlite3 libsqlite3-dev \
     && apt-get clean
 
 COPY ./constraints.txt /constraints.txt
