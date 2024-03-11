@@ -1,13 +1,15 @@
 from airflow import DAG
 from datetime import datetime
 from datetime import timedelta
+import os
 
 from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 
+DAG_ID = os.path.basename(__file__).replace(".py", "")
 
 with DAG(
-    dag_id="using_variables_2",
+    dag_id=DAG_ID,
     schedule="0 0 * * *",  # Run daily at midnight
     start_date=datetime(2022, 1, 1),
     catchup=False,

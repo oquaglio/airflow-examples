@@ -39,13 +39,15 @@ RUN apt-get update -yqq && \
     && apt-get clean
 
 COPY ./constraints.txt /constraints.txt
+COPY ./requirements.txt /requirements.txt
 
 # Upgrade pip
 # Create airflow user
 # Install apache airflow with subpackages
 RUN pip install --upgrade pip && \
     useradd -ms /bin/bash -d ${AIRFLOW_HOME} airflow && \
-    pip install apache-airflow[postgres]==${AIRFLOW_VERSION} --constraint /constraints.txt
+    pip install apache-airflow[postgres]==${AIRFLOW_VERSION} --constraint /constraints.txt && \
+    pip install -r /requirements.txt --constraint /constraints.txt
 
 # Copy the entrypoint.sh from host to container (at path AIRFLOW_HOME)
 COPY ./entrypoint.sh ./entrypoint.sh

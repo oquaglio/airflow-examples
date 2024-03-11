@@ -36,10 +36,9 @@ user: admin / admin
 
 ### Remove Container
 
-docker container stop $AIRFLOW_CONTAINER; docker container rm $AIRFLOW_CONTAINER
-
-docker container ls -a
-
+```SH
+docker container stop $AIRFLOW_CONTAINER; docker container rm $AIRFLOW_CONTAINER; docker container ls -a
+```
 
 ## Get Terminal
 
@@ -91,6 +90,7 @@ find dags/ -type f -name "*.py" -exec sh -c 'docker exec 4fd3504382b9 mkdir -p "
 
 Copy the whole dags dir:
 
+docker cp dags $AIRFLOW_CONTAINER:/opt/airflow/
 docker cp ../../../../dags $AIRFLOW_CONTAINER:/opt/airflow/
 
 

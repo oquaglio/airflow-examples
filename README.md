@@ -55,6 +55,6 @@ AIRFLOW_VERSION=2.8.2
 pip install "apache-airflow[postgres]==${AIRFLOW_VERSION}" --constraint ../../setup/container/airflow-basic/2.8.2/constraints.txt
 
 
-# Now run the dags
+## Now run the dags
 
 python dag.py
