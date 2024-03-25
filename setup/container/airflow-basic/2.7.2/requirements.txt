@@ -1,0 +1,9 @@
+watchtower # 2.0.1
+apache-airflow-providers-snowflake # 5.0.1
+airflow-dbt==0.4.0
+dbt-snowflake==1.7.1
+jq==1.6.0
+psycopg2-binary # 2.9.9
+boto3 # 1.28.17
+--constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.7.2/constraints-3.11.txt"
+

@@ -10,9 +10,20 @@
 
 Set these vars before continuing:
 
+For 2.7.2:
+AIRFLOW_IMAGE=ottoq/airflow-basic:2.7.2
+AIRFLOW_CONTAINER=airflow-basic-272
+AIRFLOW_PORT=9001
+
+For 2.8.2:
 AIRFLOW_IMAGE=ottoq/airflow-basic:2.8.2
 AIRFLOW_CONTAINER=airflow-basic-282
 AIRFLOW_PORT=9001
+
+Verify:
+echo $AIRFLOW_IMAGE
+echo $AIRFLOW_CONTAINER
+echo $AIRFLOW_PORT
 
 ## Build
 
@@ -32,6 +43,11 @@ docker container start $AIRFLOW_CONTAINER
 Now, go to: http://localhost:9001/home
 
 user: admin / admin
+
+
+## Start Container
+
+docker container start $AIRFLOW_CONTAINER
 
 
 ### Remove Container
@@ -93,6 +109,9 @@ Copy the whole dags dir:
 docker cp dags $AIRFLOW_CONTAINER:/opt/airflow/
 docker cp ../../../../dags $AIRFLOW_CONTAINER:/opt/airflow/
 
+
+
+Todos below this point...
 
 ## Deploy Plugins
 
