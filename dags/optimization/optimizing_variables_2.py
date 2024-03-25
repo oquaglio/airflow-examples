@@ -44,12 +44,26 @@ with DAG(
 
     dag.doc_md = dag_docs
 
-    load_script = """
-    echo "Loading source freshness and dbt test results into into Snowflake... "
-    ${{AIRFLOW_HOME}}/.local/bin/dbt run-operation local_load_data_to_sf --args "{{db_name: {DB_NAME}, schema_name: {SCHEMA_NAME}}}" --project-dir ${{AIRFLOW_HOME}}/dags/{STACK_NAME}/dbt/ --profiles-dir {DBT_PROFILES_DIR} --target {TARGET}
+    test_script = f"""
+    echo "Starting test script to echo parameters..."
+    echo "AIRFLOW_HOME: $AIRFLOW_HOME"
+    echo "DB_NAME: {DB_NAME}"
+    echo "SCHEMA_NAME: {DB_SCHEMA_NAME}"
+    echo "STACK_NAME: {STACK_NAME}"
+    echo "DBT_PROFILES_DIR: {DBT_PROFILES_DIR}"
+    echo "TARGET: {TARGET}"
+    echo --args '{{"db_name": "{DB_NAME}", "schema_name": "{DB_SCHEMA_NAME}"}}'
+    echo "All parameters have been echoed."
+    """
+
+    load_script = f"""
+    echo "Loading source freshness and dbt test results into Snowflake... "
+    dbt run-operation local_load_data_to_sf --args '{{"db_name": "{DB_NAME}", "schema_name": "{DB_SCHEMA_NAME}"}}' --project-dir $AIRFLOW_HOME/dags/{STACK_NAME}/dbt/ --profiles-dir {DBT_PROFILES_DIR} --target {TARGET}
     echo "Data Load Completed"
     """
 
+    bash_test = BashOperator(task_id="bash_test", bash_command=test_script, trigger_rule="all_done")
+
     load_results = BashOperator(task_id="load_results_to_snowflake", bash_command=load_script, trigger_rule="all_done")
 
-    load_results
+    bash_test >> load_results
