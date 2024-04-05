@@ -60,8 +60,17 @@ def choose_tasks_for_current_window(**kwargs):
     task_group_id = kwargs.get("task_group_id")
     list_of_tasks = kwargs.get("list_of_tasks")
     number_of_windows = kwargs.get("number_of_windows", 12)
-    current_minute = datetime.now().minute
-    window_index = current_minute // 5
+
+    # Extracting the execution_date from the context
+    execution_date = kwargs.get("execution_date")
+    if not execution_date:
+        raise ValueError("execution_date not found in context")
+
+    # current_minute = datetime.now().minute
+    minutes_per_window = 60 // number_of_windows
+
+    # Calculate the window index based on execution_date's minute
+    window_index = (execution_date.minute // minutes_per_window) % number_of_windows
     tasks_for_current_window = list(divide_tasks_into_windows(list_of_tasks, number_of_windows))[
         window_index % number_of_windows
     ]  # Ensure cycling every hour
