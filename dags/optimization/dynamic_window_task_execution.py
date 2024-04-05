@@ -54,26 +54,42 @@ def divide_tasks_into_windows(input_list, number_of_windows):
 # print(windows)
 
 
-# Function to determine which window to execute
+# Split tasks up over 1hr cycle based on minutes_per_window
 def choose_tasks_for_current_window(**kwargs):
-    """Determines the active window based on the current time"""
+    """Determines the active window based on the execution time and configured window duration."""
     task_group_id = kwargs.get("task_group_id")
     list_of_tasks = kwargs.get("list_of_tasks")
-    number_of_windows = kwargs.get("number_of_windows", 12)
+    # Assuming minutes_per_window is now directly provided
+    minutes_per_window = kwargs.get("minutes_per_window")
+    test_time = kwargs.get("test_time")  # For testing, allows overriding the execution_date
 
-    # Extracting the execution_date from the context
-    execution_date = kwargs.get("execution_date")
-    if not execution_date:
-        raise ValueError("execution_date not found in context")
+    # Use test_time if provided, else extract the execution_date from the context
+    if test_time and isinstance(test_time, datetime):
+        execution_date = test_time
+    else:
+        execution_date = kwargs.get("execution_date")
+        if not execution_date:
+            raise ValueError("execution_date not found in context and no test_time provided")
 
-    # current_minute = datetime.now().minute
-    minutes_per_window = 60 // number_of_windows
+    # Validate that minutes_per_window is provided and is a valid number
+    if not minutes_per_window or minutes_per_window <= 0:
+        raise ValueError("Invalid or missing 'minutes_per_window'. It must be a positive number.")
 
-    # Calculate the window index based on execution_date's minute
+    # Calculate the number of windows based on the cycle duration and window duration
+    # This replaces the direct use of 'number_of_windows'
+    number_of_windows = 60 // minutes_per_window
+
+    # Ensure the cycle divides evenly into the specified windows; adjust logic if it does not
+    if 60 % minutes_per_window != 0:
+        raise ValueError("The cycle duration (of 60 mins) does not divide evenly by the minutes per window.")
+
+    # Calculate the window index based on execution_date's minute within the cycle
     window_index = (execution_date.minute // minutes_per_window) % number_of_windows
     tasks_for_current_window = list(divide_tasks_into_windows(list_of_tasks, number_of_windows))[
-        window_index % number_of_windows
-    ]  # Ensure cycling every hour
+        window_index
+    ]  # Determine the set of tasks for the current window
+
+    # Generate task IDs for the current window
     task_ids = [f"{task_group_id}.task_{s.replace(' ', '_')}" for s in tasks_for_current_window]
     return task_ids
 
@@ -106,7 +122,6 @@ with DAG(
     start = DummyOperator(task_id="start")
 
     task_group_id = "stack_tasks"
-    number_of_windows = 12  # e.g, if schedule is 5 mins, make this 12
 
     with TaskGroup(task_group_id) as tg:
         branch_op = BranchPythonOperator(
@@ -115,7 +130,7 @@ with DAG(
             op_kwargs={
                 "task_group_id": task_group_id,
                 "list_of_tasks": list_of_stacks,
-                "number_of_windows": number_of_windows,
+                "minutes_per_window": 5,  # must match the DAG schedule interval
             },
         )
 
@@ -134,19 +149,16 @@ with DAG(
 
 
 if __name__ == "__main__":
-    print(
-        "Selected Stacks for Current Window (of 12):",
-        choose_tasks_for_current_window(
-            task_group_id="stack_tasks", list_of_tasks=list_of_stacks, number_of_windows=12
-        ),
-    )
-
-    print(
-        "Selected Stacks for Current Window (of 1):",
-        choose_tasks_for_current_window(task_group_id="stack_tasks", list_of_tasks=list_of_stacks, number_of_windows=1),
-    )
-
-    print(
-        "Selected Stacks for Current Window (of 6):",
-        choose_tasks_for_current_window(task_group_id="stack_tasks", list_of_tasks=list_of_stacks, number_of_windows=6),
-    )
+    # Test to make sure all tasks are allotted a window
+    minutes_per_window = 10
+    for minute in [minutes_per_window * i for i in range(0, 60 // minutes_per_window)]:
+        test_override_time = datetime(2022, 1, 1, 15, minute)
+        print(
+            f"Selected stacks for {minutes_per_window} min window at minute {test_override_time.minute}:",
+            choose_tasks_for_current_window(
+                task_group_id="stack_tasks",
+                list_of_tasks=list_of_stacks,
+                minutes_per_window=minutes_per_window,
+                test_time=test_override_time,
+            ),
+        )
