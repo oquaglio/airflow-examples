@@ -1,8 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from airflow import DAG
+from airflow.utils.trigger_rule import TriggerRule
 from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.task_group import TaskGroup
+from airflow.utils.dates import days_ago
 
 # Example list of strings
 list_of_stacks = [
@@ -57,6 +59,8 @@ def divide_tasks_into_windows(input_list, number_of_windows):
 # Split tasks up over 1hr cycle based on minutes_per_window
 def choose_tasks_for_current_window(**kwargs):
     """Determines the active window based on the execution time and configured window duration."""
+    from datetime import datetime
+
     task_group_id = kwargs.get("task_group_id")
     list_of_tasks = kwargs.get("list_of_tasks")
     # Assuming minutes_per_window is now directly provided
@@ -109,7 +113,7 @@ def print_string(task_string):
 with DAG(
     "dynamic_window_task_execution",
     default_args={
-        "start_date": datetime(2022, 1, 1),
+        "start_date": days_ago(1),
         "catchup": False,
         "retries": 1,
         "retry_delay": timedelta(minutes=1),
@@ -140,17 +144,24 @@ with DAG(
                 task_id=f"task_{stack.replace(' ', '_')}",
                 python_callable=print_string,
                 op_args=[stack],
+                retries=1,
+                retry_delay=timedelta(seconds=5),
             )
             branch_op >> task
 
-    end = DummyOperator(task_id="end")
+    end = DummyOperator(
+        task_id="end",
+        trigger_rule=TriggerRule.ALL_DONE,  # Ensures `end` runs regardless of previous tasks' states
+    )
 
     start >> tg >> end
 
 
 if __name__ == "__main__":
+    from datetime import datetime
+
     # Test to make sure all tasks are allotted a window
-    minutes_per_window = 10
+    minutes_per_window = 5
     for minute in [minutes_per_window * i for i in range(0, 60 // minutes_per_window)]:
         test_override_time = datetime(2022, 1, 1, 15, minute)
         print(
