@@ -103,10 +103,21 @@ def choose_tasks_for_current_window(**kwargs):
 
 
 # Function to print the string (simulate task execution)
-def print_string(task_string):
-    if task_string == "stack_15":
-        raise ValueError(f"Simulated failure for task: {task_string}")
-    print(f"Executing task for string: {task_string}")
+def print_string(task_string, **kwargs):
+    # Extract task instance and current retry count from context
+    from airflow.models import TaskInstance
+
+    ti: TaskInstance = kwargs["ti"]
+    retry_count = ti.try_number - 1  # try_number includes the current attempt, so subtract 1 to get the retry count
+
+    # Determine the numeric part of the task string (assuming format "stack_X")
+    task_num = int(task_string.split("_")[-1])
+
+    # Fail tasks with an even number on their first attempt
+    if task_num % 2 == 0 and retry_count == 0:
+        raise ValueError(f"Simulated failure for task: {task_string} on attempt {retry_count + 1}")
+
+    print(f"Executing task for string: {task_string} on attempt {retry_count + 1}")
 
 
 # Defining the DAG
@@ -121,6 +132,7 @@ with DAG(
     schedule_interval="*/5 * * * *",  # Every 5 minutes
     max_active_runs=1,
     tags=["example", "test"],
+    catchup=False,
 ) as dag:
 
     start = DummyOperator(task_id="start")
