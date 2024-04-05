@@ -74,6 +74,7 @@ with DAG(
     default_args=DEFAULT_ARGS,  # The default arguments taken from above
     catchup=False,  # If API load accepts date specific filtering, make this value equal to True
     max_active_runs=1,  # Enforces that only one instance of this DAG can run at a time. DAG run will finish before moving to the next run.
+    tags=["example", "test"],
 ) as dag:
 
     dag.doc_md = dag_docs

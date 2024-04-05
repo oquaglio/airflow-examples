@@ -19,7 +19,7 @@ with DAG(
     description="A DAG to check the DBT version.",
     schedule_interval="@once",
     start_date=days_ago(1),
-    tags=["test"],
+    tags=["example", "test"],
 ) as dag:
 
     cli_command = BashOperator(task_id="bash_command", bash_command="$AIRFLOW_HOME/.local/bin/dbt --version")

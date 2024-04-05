@@ -19,7 +19,7 @@ with DAG(
     description="A DAG to print the Python version",
     schedule_interval="@once",
     start_date=days_ago(1),
-    tags=["example", "airflow", "python"],
+    tags=["example", "airflow", "python", "test"],
 ) as dag:
 
     print_python_version = BashOperator(

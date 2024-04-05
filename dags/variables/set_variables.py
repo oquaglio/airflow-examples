@@ -39,7 +39,7 @@ with DAG(
     description="Set the Airflow Variables.",
     schedule="@once",
     start_date=days_ago(0),
-    tags=["admin", "variables"],
+    tags=["variables", "test"],
 ) as dag:
 
     dag.doc_md = f"""

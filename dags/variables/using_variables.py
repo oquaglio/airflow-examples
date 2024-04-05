@@ -24,7 +24,7 @@ dag = DAG(
     catchup=False,
     max_active_runs=1,
     dagrun_timeout=timedelta(minutes=60),
-    tags=["variables"],
+    tags=["variables", "test"],
     params={"example_key": "example_value"},
     provide_context=True,  # cache vars
 )

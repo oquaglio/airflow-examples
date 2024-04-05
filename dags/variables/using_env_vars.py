@@ -11,5 +11,10 @@ def print_database_name():
     print(f"The database name is: {database_name}")
 
 
-with DAG("using_env_vars", start_date=datetime(2022, 1, 1), schedule_interval="@once") as dag:
+with DAG(
+    "using_env_vars",
+    start_date=datetime(2022, 1, 1),
+    schedule_interval="@once",
+    tags=["variables", "test"],
+) as dag:
     task = PythonOperator(task_id="print_database_name", python_callable=print_database_name)

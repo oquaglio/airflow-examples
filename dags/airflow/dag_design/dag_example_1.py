@@ -14,7 +14,7 @@ with DAG(
     start_date=datetime(2022, 1, 1),
     catchup=False,
     dagrun_timeout=timedelta(minutes=60),
-    tags=["otto", "variables"],
+    tags=["example", "test", "variables"],
     params={"example_key": "example_value"},
 ) as dag:
     run_this_last = EmptyOperator(

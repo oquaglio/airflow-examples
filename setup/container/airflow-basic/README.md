@@ -27,36 +27,41 @@ echo $AIRFLOW_PORT
 
 ## Build
 
+In dir with Dockerfile:
+```SH
 docker build -t $AIRFLOW_IMAGE .
+```
 
+```SH
 docker image ls
+```
 
-
-## Run Container
+## Run [Create a New] Container
 
 docker container run -d --name $AIRFLOW_CONTAINER -p $AIRFLOW_PORT:8080 $AIRFLOW_IMAGE
 
 docker container run -d --restart=no --name $AIRFLOW_CONTAINER -p $AIRFLOW_PORT:8080 $AIRFLOW_IMAGE
 
+
+## Start Existing Container
+
 docker container start $AIRFLOW_CONTAINER
 
-Now, go to: http://localhost:9001/home
+Wait a moment, then go to: http://localhost:9001/home
 
 user: admin / admin
-
-
-## Start Container
-
-docker container start $AIRFLOW_CONTAINER
 
 
 ### Remove Container
 
 ```SH
-docker container stop $AIRFLOW_CONTAINER; docker container rm $AIRFLOW_CONTAINER; docker container ls -a
+docker container stop $AIRFLOW_CONTAINER; docker container rm $AIRFLOW_CONTAINER;
+```
+```SH
+docker container ls -a
 ```
 
-## Get Terminal
+## Get an Interactive TTY in Container
 
 docker exec -it $AIRFLOW_CONTAINER /bin/bash
 
@@ -78,6 +83,12 @@ python -c "import airflow, os; print(os.path.dirname(airflow.__file__))"
 e.g.:
 
 /usr/local/lib/python3.11/site-packages/airflow
+
+
+# airflow.cfg
+
+/opt/airflow/airflow.cfg
+
 
 # Metadata DB
 
@@ -109,6 +120,16 @@ Copy the whole dags dir:
 docker cp dags $AIRFLOW_CONTAINER:/opt/airflow/
 docker cp ../../../../dags $AIRFLOW_CONTAINER:/opt/airflow/
 
+
+## Tail Log Files
+
+```SH
+tail -f $AIRFLOW_HOME/logs/scheduler/latest/scheduler.log
+```
+
+```SH
+docker exec -it $AIRFLOW_CONTAINER tail -f $AIRFLOW_HOME/logs/scheduler/latest/scheduler.log
+```
 
 
 Todos below this point...

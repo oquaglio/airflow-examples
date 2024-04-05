@@ -22,7 +22,7 @@ dag = DAG(
     description="A test DAG to check all dependencies are installed.",
     schedule_interval="@once",
     start_date=days_ago(1),
-    tags=["example", "airflow", "python"],
+    tags=["example", "airflow", "python", "test"],
 )
 
 

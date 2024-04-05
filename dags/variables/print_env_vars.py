@@ -15,9 +15,7 @@ with DAG(
     schedule_interval=None,
     start_date=datetime(2022, 1, 1),
     catchup=False,
-    tags=[
-        "variables",
-    ],
+    tags=["variables", "test"],
 ) as dag:
 
     task_print_env_vars = PythonOperator(task_id="print_env_vars", python_callable=print_env_vars)

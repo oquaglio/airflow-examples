@@ -39,7 +39,7 @@ with DAG(
     default_args=default_args,
     schedule_interval="0 */12 * * *",
     start_date=days_ago(0),
-    tags=["data_quality", "monitoring", "admin"],
+    tags=["example", "test"],
 ) as dag:
 
     dag.doc_md = dag_docs
