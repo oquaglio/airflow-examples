@@ -105,9 +105,21 @@ sqlite3 /opt/airflow/airflow.db
 
 ## Deploy DAGS
 
+Optionally, remove all DAGs first:
+
+```SH
+docker exec $AIRFLOW_CONTAINER ls -l /opt/airflow/dags/
+```
+
+```SH
+docker exec $AIRFLOW_CONTAINER rm -rf /opt/airflow/dags/
+```
+
+Copy single DAG:
+
 docker cp <the file> <container-name/id>:<directory>
 
-Example:
+Copy all DAGs in dir:
 
 docker cp dags/*.py $AIRFLOW_CONTAINER:/opt/airflow/dags
 
@@ -115,7 +127,7 @@ Copy all dags (run from parent dir):
 
 find dags/ -type f -name "*.py" -exec sh -c 'docker exec 4fd3504382b9 mkdir -p "/opt/airflow/$(dirname "$0")" && docker cp "$0" 4fd3504382b9:/opt/airflow/"$0"' {} \;
 
-Copy the whole dags dir:
+Just copy the whole dags dir:
 
 ```SH
 docker cp dags $AIRFLOW_CONTAINER:/opt/airflow/
