@@ -58,16 +58,14 @@ def divide_tasks_into_windows(input_list, number_of_windows):
 
 # Split tasks up over 1hr cycle based on minutes_per_window
 def choose_tasks_for_current_window(**kwargs):
-    """Determines the active window based on the execution time and configured window duration."""
     from datetime import datetime
 
     task_group_id = kwargs.get("task_group_id")
     list_of_tasks = kwargs.get("list_of_tasks")
-    # Assuming minutes_per_window is now directly provided
     minutes_per_window = kwargs.get("minutes_per_window")
-    test_time = kwargs.get("test_time")  # For testing, allows overriding the execution_date
+    offset_minutes = kwargs.get("offset_minutes", 0)  # New parameter for offset
+    test_time = kwargs.get("test_time")
 
-    # Use test_time if provided, else extract the execution_date from the context
     if test_time and isinstance(test_time, datetime):
         execution_date = test_time
     else:
@@ -75,36 +73,26 @@ def choose_tasks_for_current_window(**kwargs):
         if not execution_date:
             raise ValueError("execution_date not found in context and no test_time provided")
 
-    # Validate that minutes_per_window is provided and is a valid number
     if not minutes_per_window or minutes_per_window <= 0:
         raise ValueError("Invalid or missing 'minutes_per_window'. It must be a positive number.")
 
-    # Calculate the number of windows based on the cycle duration and window duration
-    # This replaces the direct use of 'number_of_windows'
     number_of_windows = 60 // minutes_per_window
-
-    # Ensure the cycle divides evenly into the specified windows; adjust logic if it does not
     if 60 % minutes_per_window != 0:
         raise ValueError("The cycle duration (of 60 mins) does not divide evenly by the minutes per window.")
 
-    # Calculate the window index based on execution_date's minute within the cycle
-    window_index = (execution_date.minute // minutes_per_window) % number_of_windows
-    tasks_for_current_window = list(divide_tasks_into_windows(list_of_tasks, number_of_windows))[
-        window_index
-    ]  # Determine the set of tasks for the current window
+    adjusted_minute = (execution_date.minute + offset_minutes) % 60
+    window_index = (adjusted_minute // minutes_per_window) % number_of_windows
 
-    # Generate task IDs for the current window
+    tasks_for_current_window = list(divide_tasks_into_windows(list_of_tasks, number_of_windows))[window_index]
+
     task_ids = [f"{task_group_id}.task_{s.replace(' ', '_')}" for s in tasks_for_current_window]
     return task_ids
-
-
-# def choose_stacks_for_current_window(**kwargs):
-#     return ["string_tasks.task_stack_1", "string_tasks.task_stack_2", "string_tasks.task_stack_3"]
 
 
 # Function to print the string (simulate task execution)
 def print_string(task_string, **kwargs):
     # Extract task instance and current retry count from context
+    import time
     from airflow.models import TaskInstance
 
     ti: TaskInstance = kwargs["ti"]
@@ -118,11 +106,12 @@ def print_string(task_string, **kwargs):
         raise ValueError(f"Simulated failure for task: {task_string} on attempt {retry_count + 1}")
 
     print(f"Executing task for string: {task_string} on attempt {retry_count + 1}")
+    time.sleep(300)
 
 
 # Defining the DAG
 with DAG(
-    "dynamic_window_task_execution",
+    "dynamic_window_task_execution_with_offset",
     default_args={
         "start_date": days_ago(1),
         "catchup": False,
@@ -130,7 +119,7 @@ with DAG(
         "retry_delay": timedelta(minutes=1),
     },
     schedule_interval="*/5 * * * *",  # Every 5 minutes
-    max_active_runs=3,
+    max_active_runs=1,
     tags=["example", "test"],
     catchup=False,
 ) as dag:
@@ -156,8 +145,8 @@ with DAG(
                 task_id=f"task_{stack.replace(' ', '_')}",
                 python_callable=print_string,
                 op_args=[stack],
-                retries=2,
-                retry_delay=timedelta(seconds=10),
+                retries=1,
+                retry_delay=timedelta(seconds=5),
             )
             branch_op >> task
 
@@ -183,5 +172,19 @@ if __name__ == "__main__":
                 list_of_tasks=list_of_stacks,
                 minutes_per_window=minutes_per_window,
                 test_time=test_override_time,
+            ),
+        )
+
+    minutes_per_window = 5
+    for minute in [minutes_per_window * i for i in range(0, 60 // minutes_per_window)]:
+        test_override_time = datetime(2022, 1, 1, 15, minute)
+        print(
+            f"Selected stacks for {minutes_per_window} min window at minute {test_override_time.minute} with offset:",
+            choose_tasks_for_current_window(
+                task_group_id="stack_tasks",
+                list_of_tasks=list_of_stacks,
+                minutes_per_window=minutes_per_window,
+                test_time=test_override_time,
+                offset_minutes=10,
             ),
         )
