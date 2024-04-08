@@ -4,6 +4,9 @@
 
 - Creates a single container
 - Uses SQLite for metadata DB
+- Uses SequentialExecutor
+
+SequentialExecutor will only allow 1 task at a time to execute.
 
 
 ## Before you Begin
