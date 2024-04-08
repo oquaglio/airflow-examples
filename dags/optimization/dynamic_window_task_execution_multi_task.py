@@ -1,10 +1,13 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.utils.trigger_rule import TriggerRule
-from airflow.operators.python_operator import BranchPythonOperator, PythonOperator
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.dates import days_ago
+import os
+
+DAG_ID = os.path.basename(__file__).replace(".py", "")
 
 # Example list of strings
 list_of_stacks = [
@@ -94,8 +97,16 @@ def choose_tasks_for_current_window(**kwargs):
     ]  # Determine the set of tasks for the current window
 
     # Generate task IDs for the current window
-    task_ids = [f"{task_group_id}.task_{s.replace(' ', '_')}" for s in tasks_for_current_window]
-    return task_ids
+    # task_ids_to_run = [f"{task_group_id}.task_{s.replace(' ', '_')}" for s in tasks_for_current_window]
+    task_ids_to_run = []
+    for task_name in tasks_for_current_window:
+        # Assuming each task within a Task Group follows a naming convention like 'task_<task_name>'
+        task_id = f"{task_group_id}.tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_first_task"
+        task_ids_to_run.append(task_id)
+
+        task_id = f"{task_group_id}.tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_second_task"
+        task_ids_to_run.append(task_id)
+    return task_ids_to_run
 
 
 # def choose_stacks_for_current_window(**kwargs):
@@ -103,46 +114,39 @@ def choose_tasks_for_current_window(**kwargs):
 
 
 # Function to print the string (simulate task execution)
-def print_string(task_string, **kwargs):
-    # Extract task instance and current retry count from context
-    from airflow.models import TaskInstance
+def first_task(task_string, **kwargs):
+    print(f"Executing second task for: {task_string}")
 
-    ti: TaskInstance = kwargs["ti"]
-    retry_count = ti.try_number - 1  # try_number includes the current attempt, so subtract 1 to get the retry count
 
-    # Determine the numeric part of the task string (assuming format "stack_X")
-    task_num = int(task_string.split("_")[-1])
-
-    # Fail tasks with an even number on their first attempt
-    if task_num % 2 == 0 and retry_count == 0:
-        raise ValueError(f"Simulated failure for task: {task_string} on attempt {retry_count + 1}")
-
-    print(f"Executing task for string: {task_string} on attempt {retry_count + 1}")
+def second_task(task_string, **kwargs):
+    print(f"Executing second task for: {task_string}")
 
 
 # Defining the DAG
 with DAG(
-    "dynamic_window_task_execution",
+    DAG_ID,
     default_args={
-        "start_date": days_ago(1),
+        "start_date": datetime(2022, 1, 1),
         "catchup": False,
         "retries": 1,
         "retry_delay": timedelta(minutes=1),
     },
-    schedule_interval="*/5 * * * *",  # Every 5 minutes
+    schedule="*/5 * * * *",  # Every 5 minutes
     max_active_runs=3,
     tags=["example", "test"],
     catchup=False,
 ) as dag:
 
-    start = DummyOperator(task_id="start")
+    start = EmptyOperator(task_id="start")
 
-    task_group_id = "stack_tasks"
+    task_group_id = "tg_stacks"
 
     with TaskGroup(task_group_id) as tg:
+        # schedule just the tasks ids for the current window
         branch_op = BranchPythonOperator(
             task_id="branch_window",
             python_callable=choose_tasks_for_current_window,
+            retries=0,
             op_kwargs={
                 "task_group_id": task_group_id,
                 "list_of_tasks": list_of_stacks,
@@ -150,20 +154,31 @@ with DAG(
             },
         )
 
-        # Create tasks for each string
+        # Create tasks for each stack
         for stack in list_of_stacks:
-            task = PythonOperator(
-                task_id=f"task_{stack.replace(' ', '_')}",
-                python_callable=print_string,
-                op_args=[stack],
-                retries=2,
-                retry_delay=timedelta(seconds=10),
-            )
-            branch_op >> task
+            with TaskGroup(f"tg_{stack.replace(' ', '_')}") as stack_tg:
+                task1 = PythonOperator(
+                    task_id=f"task_{stack.replace(' ', '_')}_first_task",
+                    python_callable=first_task,
+                    op_args=[stack],
+                    retries=2,
+                    retry_delay=timedelta(seconds=10),
+                )
 
-    end = DummyOperator(
+                task2 = PythonOperator(
+                    task_id=f"task_{stack.replace(' ', '_')}_second_task",
+                    python_callable=second_task,
+                    op_args=[stack],
+                    retries=2,
+                    retry_delay=timedelta(seconds=10),
+                )
+
+                branch_op >> task1
+                branch_op >> task2
+
+    end = EmptyOperator(
         task_id="end",
-        trigger_rule=TriggerRule.ALL_DONE,  # Ensures `end` runs regardless of previous tasks' states
+        trigger_rule=TriggerRule.ALL_DONE,
     )
 
     start >> tg >> end
@@ -179,7 +194,7 @@ if __name__ == "__main__":
         print(
             f"Selected stacks for {minutes_per_window} min window at minute {test_override_time.minute}:",
             choose_tasks_for_current_window(
-                task_group_id="stack_tasks",
+                task_group_id="tg_stacks",
                 list_of_tasks=list_of_stacks,
                 minutes_per_window=minutes_per_window,
                 test_time=test_override_time,
