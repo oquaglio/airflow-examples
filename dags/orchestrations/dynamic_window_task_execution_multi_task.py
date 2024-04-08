@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.operators.python import BranchPythonOperator, PythonOperator
-from airflow.sensors.time_delta import TimeDeltaSensor
+
+# from airflow.sensors.time_delta import TimeDeltaSensor
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.task_group import TaskGroup
-from airflow.utils.dates import days_ago
 import os
 
 DAG_ID = os.path.basename(__file__).replace(".py", "")
@@ -123,6 +123,15 @@ def second_task(task_string, **kwargs):
     print(f"Executing second task for: {task_string}")
 
 
+def delay_execution(**kwargs):
+    """Custom delay function."""
+    import time
+
+    delay_in_secs = kwargs.get("delay_in_secs")
+
+    time.sleep(delay_in_secs)  # Sleep for 60 seconds
+
+
 # DAG definition
 with DAG(
     DAG_ID,
@@ -142,9 +151,10 @@ with DAG(
 
     with TaskGroup("tg_stacks") as tg_stacks:
         # choose the tasks for the current window
-        branch_op = BranchPythonOperator(
-            task_id="branch_window",
+        select_tasks_operator = BranchPythonOperator(
+            task_id="choose_tasks_to_run",
             python_callable=choose_tasks_for_current_window,
+            do_xcom_push=False,
             retries=0,
             op_kwargs={
                 "task_group_id": "tg_stacks",
@@ -159,30 +169,33 @@ with DAG(
                 task1 = PythonOperator(
                     task_id=f"task_{stack.replace(' ', '_')}_first_task",
                     python_callable=first_task,
+                    do_xcom_push=False,
                     op_args=[stack],
                     retries=2,
                     retry_delay=timedelta(seconds=10),
                 )
 
-                delay_task = TimeDeltaSensor(
-                    task_id=f"task_{stack.replace(' ', '_')}_wait", delta=timedelta(seconds=60)
+                # add a delay from when task1 completes
+                delay_task = PythonOperator(
+                    task_id=f"task_{stack.replace(' ', '_')}_wait",
+                    python_callable=delay_execution,
+                    do_xcom_push=False,
+                    op_kwargs={"delay_in_secs": 3600},
                 )
 
                 # skipped of all reties on task 1 fail
                 task2 = PythonOperator(
                     task_id=f"task_{stack.replace(' ', '_')}_second_task",
                     python_callable=second_task,
+                    do_xcom_push=False,
                     op_args=[stack],
                     retries=2,
                     retry_delay=timedelta(seconds=10),
                 )
 
-                branch_op >> task1 >> delay_task >> task2
+                select_tasks_operator >> task1 >> delay_task >> task2
 
-        # branch_op >> [tg_stack_tasks for tg_stack_tasks in tg_stacks.subtasks]
-        # branch_op >> tg_stack_tasks
-
-    # run when all upstream task complete (success, failed, or skipped)
+    # run when all tasks in task groups complete (success, failed, or skipped)
     end = EmptyOperator(
         task_id="end",
         trigger_rule=TriggerRule.ALL_DONE,
