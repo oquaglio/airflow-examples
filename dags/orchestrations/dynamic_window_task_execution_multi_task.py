@@ -102,11 +102,11 @@ def choose_tasks_for_current_window(**kwargs):
     task_ids_to_run = []
     for task_name in tasks_for_current_window:
         # Assuming each task within a Task Group follows a naming convention like 'task_<task_name>'
-        task_id = f"tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_first_task"
+        task_id = f"tg_stacks.tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_first_task"
         task_ids_to_run.append(task_id)
 
-        task_id = f"tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_second_task"
-        task_ids_to_run.append(task_id)
+        # task_id = f"tg_stacks.tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_second_task"
+        # task_ids_to_run.append(task_id)
     return task_ids_to_run
 
 
@@ -140,41 +140,47 @@ with DAG(
 
     start = EmptyOperator(task_id="start")
 
-    # schedule just the tasks ids for the current window
-    branch_op = BranchPythonOperator(
-        task_id="branch_window",
-        python_callable=choose_tasks_for_current_window,
-        retries=0,
-        op_kwargs={
-            "task_group_id": "tg_stacks",
-            "list_of_tasks": list_of_stacks,
-            "minutes_per_window": 5,  # must match the DAG schedule interval, adjust as needed
-        },
-    )
+    with TaskGroup("tg_stacks") as tg_stacks:
+        # choose the tasks for the current window
+        branch_op = BranchPythonOperator(
+            task_id="branch_window",
+            python_callable=choose_tasks_for_current_window,
+            retries=0,
+            op_kwargs={
+                "task_group_id": "tg_stacks",
+                "list_of_tasks": list_of_stacks,
+                "minutes_per_window": 5,  # must match the DAG schedule interval, adjust as needed
+            },
+        )
 
-    # Create tasks for each stack
-    for stack in list_of_stacks:
-        with TaskGroup(f"tg_{stack.replace(' ', '_')}") as stack_tg:
-            task1 = PythonOperator(
-                task_id=f"task_{stack.replace(' ', '_')}_first_task",
-                python_callable=first_task,
-                op_args=[stack],
-                retries=2,
-                retry_delay=timedelta(seconds=10),
-            )
+        # Create tasks for each stack
+        for stack in list_of_stacks:
+            with TaskGroup(f"tg_{stack.replace(' ', '_')}") as tg_stack_tasks:
+                task1 = PythonOperator(
+                    task_id=f"task_{stack.replace(' ', '_')}_first_task",
+                    python_callable=first_task,
+                    op_args=[stack],
+                    retries=2,
+                    retry_delay=timedelta(seconds=10),
+                )
 
-            delay_task = TimeDeltaSensor(task_id="wait", delta=timedelta(seconds=60))
+                delay_task = TimeDeltaSensor(
+                    task_id=f"task_{stack.replace(' ', '_')}_wait", delta=timedelta(seconds=60)
+                )
 
-            # skipped of all reties on task 1 fail
-            task2 = PythonOperator(
-                task_id=f"task_{stack.replace(' ', '_')}_second_task",
-                python_callable=second_task,
-                op_args=[stack],
-                retries=2,
-                retry_delay=timedelta(seconds=10),
-            )
+                # skipped of all reties on task 1 fail
+                task2 = PythonOperator(
+                    task_id=f"task_{stack.replace(' ', '_')}_second_task",
+                    python_callable=second_task,
+                    op_args=[stack],
+                    retries=2,
+                    retry_delay=timedelta(seconds=10),
+                )
 
-            branch_op >> task1 >> delay_task >> task2
+                branch_op >> task1 >> delay_task >> task2
+
+        # branch_op >> [tg_stack_tasks for tg_stack_tasks in tg_stacks.subtasks]
+        # branch_op >> tg_stack_tasks
 
     # run when all upstream task complete (success, failed, or skipped)
     end = EmptyOperator(
@@ -182,8 +188,7 @@ with DAG(
         trigger_rule=TriggerRule.ALL_DONE,
     )
 
-    start >> branch_op
-    branch_op >> end
+    start >> tg_stacks >> end
 
 
 if __name__ == "__main__":
