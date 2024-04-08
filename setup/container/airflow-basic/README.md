@@ -117,7 +117,10 @@ find dags/ -type f -name "*.py" -exec sh -c 'docker exec 4fd3504382b9 mkdir -p "
 
 Copy the whole dags dir:
 
+```SH
 docker cp dags $AIRFLOW_CONTAINER:/opt/airflow/
+```
+
 docker cp ../../../../dags $AIRFLOW_CONTAINER:/opt/airflow/
 
 
