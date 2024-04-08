@@ -116,11 +116,21 @@ def choose_tasks_for_current_window(**kwargs):
 
 # Function to print the string (simulate task execution)
 def first_task(task_string, **kwargs):
+    import time
+
     print(f"Executing second task for: {task_string}")
+    delay_in_secs = kwargs.get("delay_in_secs")
+    time.sleep(delay_in_secs)
+    print(f"Done.")
 
 
 def second_task(task_string, **kwargs):
+    import time
+
     print(f"Executing second task for: {task_string}")
+    delay_in_secs = kwargs.get("delay_in_secs")
+    time.sleep(delay_in_secs)
+    print(f"Done.")
 
 
 def delay_execution(**kwargs):
@@ -169,31 +179,25 @@ with DAG(
                 task1 = PythonOperator(
                     task_id=f"task_{stack.replace(' ', '_')}_first_task",
                     python_callable=first_task,
+                    op_kwargs={"delay_in_secs": 30},
                     do_xcom_push=False,
                     op_args=[stack],
                     retries=2,
                     retry_delay=timedelta(seconds=10),
-                )
-
-                # add a delay from when task1 completes
-                delay_task = PythonOperator(
-                    task_id=f"task_{stack.replace(' ', '_')}_wait",
-                    python_callable=delay_execution,
-                    do_xcom_push=False,
-                    op_kwargs={"delay_in_secs": 3600},
                 )
 
                 # skipped of all reties on task 1 fail
                 task2 = PythonOperator(
                     task_id=f"task_{stack.replace(' ', '_')}_second_task",
                     python_callable=second_task,
+                    op_kwargs={"delay_in_secs": 30},
                     do_xcom_push=False,
                     op_args=[stack],
                     retries=2,
                     retry_delay=timedelta(seconds=10),
                 )
 
-                select_tasks_operator >> task1 >> delay_task >> task2
+                select_tasks_operator >> task1 >> task2
 
     # run when all tasks in task groups complete (success, failed, or skipped)
     end = EmptyOperator(
