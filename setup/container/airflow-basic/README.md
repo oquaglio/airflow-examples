@@ -108,7 +108,8 @@ sqlite3 /opt/airflow/airflow.db
 Optionally, remove all DAGs first:
 
 ```SH
-docker exec $AIRFLOW_CONTAINER ls -l /opt/airflow/dags/
+docker exec $AIRFLOW_CONTAINER ls -l --recursive /opt/airflow/dags/
+docker exec $AIRFLOW_CONTAINER find /opt/airflow/dags/ -type f
 ```
 
 ```SH
