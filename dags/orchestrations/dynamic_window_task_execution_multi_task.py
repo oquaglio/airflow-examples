@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.sensors.time_delta import TimeDeltaSensor
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.utils.dates import days_ago
@@ -147,7 +148,7 @@ with DAG(
         op_kwargs={
             "task_group_id": "tg_stacks",
             "list_of_tasks": list_of_stacks,
-            "minutes_per_window": 5,  # must match the DAG schedule interval
+            "minutes_per_window": 5,  # must match the DAG schedule interval, adjust as needed
         },
     )
 
@@ -162,6 +163,9 @@ with DAG(
                 retry_delay=timedelta(seconds=10),
             )
 
+            delay_task = TimeDeltaSensor(task_id="wait", delta=timedelta(seconds=60))
+
+            # skipped of all reties on task 1 fail
             task2 = PythonOperator(
                 task_id=f"task_{stack.replace(' ', '_')}_second_task",
                 python_callable=second_task,
@@ -170,16 +174,16 @@ with DAG(
                 retry_delay=timedelta(seconds=10),
             )
 
-            branch_op >> task1
-            branch_op >> task2
+            branch_op >> task1 >> delay_task >> task2
 
+    # run when all upstream task complete (success, failed, or skipped)
     end = EmptyOperator(
         task_id="end",
         trigger_rule=TriggerRule.ALL_DONE,
     )
 
-    start >> branch_op  # Connect 'start' directly to 'branch_op'
-    branch_op >> end  # Ensure 'end' waits for all paths through 'branch_op'
+    start >> branch_op
+    branch_op >> end
 
 
 if __name__ == "__main__":
