@@ -101,10 +101,10 @@ def choose_tasks_for_current_window(**kwargs):
     task_ids_to_run = []
     for task_name in tasks_for_current_window:
         # Assuming each task within a Task Group follows a naming convention like 'task_<task_name>'
-        task_id = f"{task_group_id}.tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_first_task"
+        task_id = f"tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_first_task"
         task_ids_to_run.append(task_id)
 
-        task_id = f"{task_group_id}.tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_second_task"
+        task_id = f"tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_second_task"
         task_ids_to_run.append(task_id)
     return task_ids_to_run
 
@@ -122,7 +122,7 @@ def second_task(task_string, **kwargs):
     print(f"Executing second task for: {task_string}")
 
 
-# Defining the DAG
+# DAG definition
 with DAG(
     DAG_ID,
     default_args={
@@ -139,49 +139,47 @@ with DAG(
 
     start = EmptyOperator(task_id="start")
 
-    task_group_id = "tg_stacks"
+    # schedule just the tasks ids for the current window
+    branch_op = BranchPythonOperator(
+        task_id="branch_window",
+        python_callable=choose_tasks_for_current_window,
+        retries=0,
+        op_kwargs={
+            "task_group_id": "tg_stacks",
+            "list_of_tasks": list_of_stacks,
+            "minutes_per_window": 5,  # must match the DAG schedule interval
+        },
+    )
 
-    with TaskGroup(task_group_id) as tg:
-        # schedule just the tasks ids for the current window
-        branch_op = BranchPythonOperator(
-            task_id="branch_window",
-            python_callable=choose_tasks_for_current_window,
-            retries=0,
-            op_kwargs={
-                "task_group_id": task_group_id,
-                "list_of_tasks": list_of_stacks,
-                "minutes_per_window": 5,  # must match the DAG schedule interval
-            },
-        )
+    # Create tasks for each stack
+    for stack in list_of_stacks:
+        with TaskGroup(f"tg_{stack.replace(' ', '_')}") as stack_tg:
+            task1 = PythonOperator(
+                task_id=f"task_{stack.replace(' ', '_')}_first_task",
+                python_callable=first_task,
+                op_args=[stack],
+                retries=2,
+                retry_delay=timedelta(seconds=10),
+            )
 
-        # Create tasks for each stack
-        for stack in list_of_stacks:
-            with TaskGroup(f"tg_{stack.replace(' ', '_')}") as stack_tg:
-                task1 = PythonOperator(
-                    task_id=f"task_{stack.replace(' ', '_')}_first_task",
-                    python_callable=first_task,
-                    op_args=[stack],
-                    retries=2,
-                    retry_delay=timedelta(seconds=10),
-                )
+            task2 = PythonOperator(
+                task_id=f"task_{stack.replace(' ', '_')}_second_task",
+                python_callable=second_task,
+                op_args=[stack],
+                retries=2,
+                retry_delay=timedelta(seconds=10),
+            )
 
-                task2 = PythonOperator(
-                    task_id=f"task_{stack.replace(' ', '_')}_second_task",
-                    python_callable=second_task,
-                    op_args=[stack],
-                    retries=2,
-                    retry_delay=timedelta(seconds=10),
-                )
-
-                branch_op >> task1
-                branch_op >> task2
+            branch_op >> task1
+            branch_op >> task2
 
     end = EmptyOperator(
         task_id="end",
         trigger_rule=TriggerRule.ALL_DONE,
     )
 
-    start >> tg >> end
+    start >> branch_op  # Connect 'start' directly to 'branch_op'
+    branch_op >> end  # Ensure 'end' waits for all paths through 'branch_op'
 
 
 if __name__ == "__main__":
