@@ -110,10 +110,6 @@ def choose_tasks_for_current_window(**kwargs):
     return task_ids_to_run
 
 
-# def choose_stacks_for_current_window(**kwargs):
-#     return ["string_tasks.task_stack_1", "string_tasks.task_stack_2", "string_tasks.task_stack_3"]
-
-
 # Function to print the string (simulate task execution)
 def first_task(task_string, **kwargs):
     import time
@@ -152,7 +148,7 @@ with DAG(
         "retry_delay": timedelta(minutes=1),
     },
     schedule="*/5 * * * *",  # Every 5 minutes
-    max_active_runs=3,
+    max_active_runs=3,  # It's safe to allow parallel runs since the tasks are grouped into windows
     tags=["example", "test"],
     catchup=False,
 ) as dag:
