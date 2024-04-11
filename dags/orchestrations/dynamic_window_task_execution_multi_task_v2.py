@@ -7,10 +7,11 @@ from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.task_group import TaskGroup
 import os
-import sys
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from scheduling_utils import choose_tasks_for_current_window
+# import sys
+
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from orchestrations.utils.scheduling_utils import choose_tasks_for_current_window
 
 DAG_ID = os.path.basename(__file__).replace(".py", "")
 
