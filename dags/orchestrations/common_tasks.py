@@ -75,20 +75,21 @@ def delay_execution(**kwargs):
 def create_common_tasks(dag):
     start = EmptyOperator(task_id="start", dag=dag)
 
+    # choose the tasks for the current window
+    select_tasks_operator = BranchPythonOperator(
+        task_id="choose_tasks_to_run",
+        python_callable=choose_tasks_for_current_window,
+        do_xcom_push=False,
+        retries=0,
+        op_kwargs={
+            "task_group_id": "tg_stacks",
+            "list_of_tasks": list_of_stacks,
+            "minutes_per_window": 5,  # split tasks into 12 groups
+        },
+        dag=dag,
+    )
+
     with TaskGroup("tg_stacks") as tg_stacks:
-        # choose the tasks for the current window
-        select_tasks_operator = BranchPythonOperator(
-            task_id="choose_tasks_to_run",
-            python_callable=choose_tasks_for_current_window,
-            do_xcom_push=False,
-            retries=0,
-            op_kwargs={
-                "task_group_id": "tg_stacks",
-                "list_of_tasks": list_of_stacks,
-                "minutes_per_window": 5,  # split tasks into 12 groups
-            },
-            dag=dag,
-        )
 
         # Create tasks for each stack
         for stack in list_of_stacks:
@@ -96,7 +97,7 @@ def create_common_tasks(dag):
                 task1 = PythonOperator(
                     task_id=f"task_{stack.replace(' ', '_')}_first_task",
                     python_callable=first_task,
-                    op_kwargs={"delay_in_secs": 30},
+                    op_kwargs={"delay_in_secs": 5},
                     do_xcom_push=False,
                     op_args=[stack],
                     retries=2,
@@ -108,7 +109,7 @@ def create_common_tasks(dag):
                 task2 = PythonOperator(
                     task_id=f"task_{stack.replace(' ', '_')}_second_task",
                     python_callable=second_task,
-                    op_kwargs={"delay_in_secs": 30},
+                    op_kwargs={"delay_in_secs": 0},
                     do_xcom_push=False,
                     op_args=[stack],
                     retries=2,
@@ -116,7 +117,7 @@ def create_common_tasks(dag):
                     dag=dag,
                 )
 
-                select_tasks_operator >> task1 >> task2
+                task1 >> task2
 
     # run when all tasks in task groups complete (success, failed, or skipped)
     end = EmptyOperator(
@@ -125,5 +126,7 @@ def create_common_tasks(dag):
         dag=dag,
     )
 
-    start >> tg_stacks >> end
-    # return start, end
+    start >> select_tasks_operator >> tg_stacks >> end
+
+
+#    return start, end
