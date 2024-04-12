@@ -15,6 +15,7 @@ task_names = ["task1", "task2", "task3", "task4", "task5"]
 with DAG(
     "dynamic_task_group_staggered_dag",
     default_args={
+        "owner": "otto",
         "depends_on_past": False,
         "email_on_failure": False,
         "email_on_retry": False,

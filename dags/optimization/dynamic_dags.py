@@ -24,7 +24,7 @@ subsets = list(divide_chunks(list_of_strings, tasks_per_dag))
 for i, subset in enumerate(subsets):
     dag_id = f"dynamic_dag_{i}"
     default_args = {
-        "owner": "airflow",
+        "owner": "otto",
         "depends_on_past": False,
         "start_date": datetime(2022, 1, 1),
         "email_on_failure": False,

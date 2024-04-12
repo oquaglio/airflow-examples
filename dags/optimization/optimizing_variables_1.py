@@ -32,7 +32,7 @@ This task retrieves data from complyflow API and saves it to the S3 output locat
 # Default settings applied to all tasks.
 # More details on the default arguments that can be used https://airflow.apache.org/docs/apache-airflow/stable/tutorial.html#default-arguments
 DEFAULT_ARGS = {
-    "owner": "mawdu",
+    "owner": "otto",
     "depends_on_past": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=1),

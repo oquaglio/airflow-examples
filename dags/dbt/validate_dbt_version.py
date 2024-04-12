@@ -6,7 +6,7 @@ import os
 DAG_ID = os.path.basename(__file__).replace(".py", "")
 
 default_args = {
-    "owner": "niwdu",
+    "owner": "otto",
     "depends_on_past": False,
     "email_on_failure": False,
     "email_on_retry": False,

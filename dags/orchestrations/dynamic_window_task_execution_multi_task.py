@@ -142,13 +142,13 @@ def delay_execution(**kwargs):
 with DAG(
     DAG_ID,
     default_args={
-        "start_date": datetime(2022, 1, 1),
-        "catchup": False,
+        "owner": "otto",
         "retries": 1,
         "retry_delay": timedelta(minutes=1),
     },
+    start_date=datetime(2025, 1, 1),
     schedule="*/5 * * * *",  # Every 5 minutes
-    max_active_runs=3,  # It's safe to allow parallel runs since the tasks are grouped into windows
+    max_active_runs=1,  # It's safe to allow parallel runs since the tasks are grouped into windows
     tags=["example", "test"],
     catchup=False,
 ) as dag:

@@ -1,21 +1,11 @@
-from datetime import datetime, timedelta
-from airflow import DAG
-from airflow.utils.trigger_rule import TriggerRule
-from airflow.operators.python import BranchPythonOperator, PythonOperator
-
-# from airflow.sensors.time_delta import TimeDeltaSensor
+from datetime import timedelta
+from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.utils.task_group import TaskGroup
-import os
+from airflow.utils.trigger_rule import TriggerRule
 
-# import sys
-
-# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from orchestrations.utils.scheduling_utils import choose_tasks_for_current_window
 
-DAG_ID = os.path.basename(__file__).replace(".py", "")
-
-# Example list of strings
 list_of_stacks = [
     "stack_1",
     "stack_2",
@@ -81,22 +71,9 @@ def delay_execution(**kwargs):
     time.sleep(delay_in_secs)  # Sleep for 60 seconds
 
 
-# DAG definition
-with DAG(
-    DAG_ID,
-    default_args={
-        "owner": "otto",
-        "retries": 1,
-        "retry_delay": timedelta(minutes=1),
-    },
-    start_date=datetime(2025, 1, 1),
-    schedule="*/5 * * * *",  # Every 5 minutes
-    max_active_runs=1,  # It's safe to allow parallel runs since the tasks are grouped into windows
-    tags=["example", "test"],
-    catchup=False,
-) as dag:
-
-    start = EmptyOperator(task_id="start")
+# Function to generate common tasks and task groups
+def create_common_tasks(dag):
+    start = EmptyOperator(task_id="start", dag=dag)
 
     with TaskGroup("tg_stacks") as tg_stacks:
         # choose the tasks for the current window
@@ -110,6 +87,7 @@ with DAG(
                 "list_of_tasks": list_of_stacks,
                 "minutes_per_window": 5,  # split tasks into 12 groups
             },
+            dag=dag,
         )
 
         # Create tasks for each stack
@@ -123,6 +101,7 @@ with DAG(
                     op_args=[stack],
                     retries=2,
                     retry_delay=timedelta(seconds=10),
+                    dag=dag,
                 )
 
                 # skipped of all reties on task 1 fail
@@ -134,6 +113,7 @@ with DAG(
                     op_args=[stack],
                     retries=2,
                     retry_delay=timedelta(seconds=10),
+                    dag=dag,
                 )
 
                 select_tasks_operator >> task1 >> task2
@@ -142,6 +122,8 @@ with DAG(
     end = EmptyOperator(
         task_id="end",
         trigger_rule=TriggerRule.ALL_DONE,
+        dag=dag,
     )
 
     start >> tg_stacks >> end
+    # return start, end

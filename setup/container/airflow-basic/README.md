@@ -123,6 +123,10 @@ Copy single DAG:
 
 docker cp <the file> <container-name/id>:<directory>
 
+docker cp dags/dynamic_window_task_execution_12am.py $AIRFLOW_CONTAINER:/opt/airflow/dags
+docker cp dags/common_tasks.py $AIRFLOW_CONTAINER:/opt/airflow/dags
+docker cp dags/utils/scheduling_utils.py $AIRFLOW_CONTAINER:/opt/airflow/dags
+
 Copy all DAGs in dir:
 
 docker cp dags/*.py $AIRFLOW_CONTAINER:/opt/airflow/dags

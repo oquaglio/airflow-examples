@@ -113,6 +113,7 @@ def print_string(task_string, **kwargs):
 with DAG(
     "dynamic_window_task_execution_with_offset",
     default_args={
+        "owner": "otto",
         "start_date": days_ago(1),
         "catchup": False,
         "retries": 1,
