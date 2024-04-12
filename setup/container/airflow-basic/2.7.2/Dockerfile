@@ -55,6 +55,8 @@ COPY ./entrypoint.sh ./entrypoint.sh
 # Set the entrypoint.sh file to be executable
 RUN chmod +x ./entrypoint.sh
 
+COPY ./airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
+
 # Set the owner of the files in AIRFLOW_HOME to the user airflow
 RUN chown -R airflow: ${AIRFLOW_HOME}
 
