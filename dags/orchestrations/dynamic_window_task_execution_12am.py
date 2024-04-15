@@ -1,6 +1,8 @@
 from airflow import DAG
 from datetime import datetime, timedelta
-from orchestrations.common_tasks import create_common_tasks
+
+# from orchestrations.common_tasks import create_common_tasks
+from orchestrations.tasks.common_tasks import create_common_tasks
 import os
 
 DAG_ID = os.path.basename(__file__).replace(".py", "")
@@ -18,7 +20,7 @@ with DAG(
     DAG_ID,
     default_args=default_args,
     start_date=datetime(2022, 1, 1),
-    schedule_interval="*/5 0 * * *",  # Every 5 minutes from 12am-1am UTC
+    schedule_interval="*/5 0 * * *",  # Every 5 minutes from 12am to 1am UTC
     catchup=False,
     max_active_runs=1,
     tags=["12am", "example", "test"],

@@ -1,11 +1,3 @@
-from datetime import timedelta
-from airflow.operators.python import PythonOperator, BranchPythonOperator
-from airflow.operators.empty import EmptyOperator
-from airflow.utils.task_group import TaskGroup
-from airflow.utils.trigger_rule import TriggerRule
-
-from orchestrations.utils.scheduling_utils import choose_tasks_for_current_window
-
 list_of_stacks = [
     "stack_1",
     "stack_2",
@@ -73,6 +65,15 @@ def delay_execution(**kwargs):
 
 # Function to generate common tasks and task groups
 def create_common_tasks(dag):
+
+    from datetime import timedelta
+    from airflow.operators.python import PythonOperator, BranchPythonOperator
+    from airflow.operators.empty import EmptyOperator
+    from airflow.utils.task_group import TaskGroup
+    from airflow.utils.trigger_rule import TriggerRule
+
+    from orchestrations.utils.scheduling_utils import choose_tasks_for_current_window
+
     start = EmptyOperator(task_id="start", dag=dag)
 
     # choose the tasks for the current window
