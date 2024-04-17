@@ -1,6 +1,6 @@
 from airflow import DAG
 from datetime import datetime, timedelta
-from orchestrations.common_tasks import create_common_tasks
+from dags.orchestrations.tasks.common_tasks import create_common_tasks
 import os
 
 DAG_ID = os.path.basename(__file__).replace(".py", "")

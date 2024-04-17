@@ -6,15 +6,23 @@ def divide_tasks_into_windows(input_list, number_of_windows):
 
 def choose_tasks_for_current_window(**kwargs):
     """Determines the tasks in the active window based on the execution time, cycle duration for all windows, and mins per window."""
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
     from datetime import datetime
 
     task_group_id = kwargs.get("task_group_id")
+    task_to_trigger_prefix = kwargs.get("task_to_trigger_prefix")
     list_of_tasks = kwargs.get("list_of_tasks")
     minutes_per_window = kwargs.get("minutes_per_window")
+
+    logging.info(f"minutes_per_window: {minutes_per_window}")
+
     # Duration before re-starting the cycle (before starting back at first task in the list).
     # E.g. if you want to schedule each task twice per hour, set this to 30.
     # Setting 60 will schedule each task once per hour
     cycle_duration_mins = kwargs.get("cycle_duration_mins", 60)
+
     # For testing, allows overriding the execution_date
     test_time = kwargs.get("test_time")
 
@@ -23,8 +31,11 @@ def choose_tasks_for_current_window(**kwargs):
         execution_date = test_time
     else:
         execution_date = kwargs.get("execution_date")
-        if not execution_date:
-            raise ValueError("execution_date not found in context and no test_time provided")
+
+    if not execution_date:
+        raise ValueError("execution_date not found in context")
+
+    logging.info(f"execution_date: {execution_date}")
 
     # Validate that minutes_per_window is provided and is a valid number
     if not minutes_per_window or minutes_per_window <= 0:
@@ -47,12 +58,15 @@ def choose_tasks_for_current_window(**kwargs):
 
     task_ids_to_run = []
     for task_name in tasks_for_current_window:
-        task_id = f"{task_group_id}.tg_{task_name.replace(' ', '_')}.task_{task_name.replace(' ', '_')}_first_task"
+        task_id = (
+            f"{task_group_id}.tg_{task_name.replace(' ', '_')}.{task_to_trigger_prefix}{task_name.replace(' ', '_')}"
+        )
         task_ids_to_run.append(task_id)
 
     return task_ids_to_run
 
 
+# Testing
 if __name__ == "__main__":
     from datetime import datetime
 
@@ -102,7 +116,8 @@ if __name__ == "__main__":
         print(
             f"Selected stacks for {minutes_per_window} min window at minute {test_override_time.minute}:",
             choose_tasks_for_current_window(
-                task_group_id="tg_stacks",
+                task_group_id="tg_freshness_monitoring",
+                task_to_trigger_prefix="run_dbt_freshness",
                 list_of_tasks=list_of_stacks,
                 minutes_per_window=minutes_per_window,
                 cycle_duration_mins=cycle_duration_mins,
@@ -121,7 +136,8 @@ if __name__ == "__main__":
         print(
             f"Selected stacks for {minutes_per_window} min window at minute {test_override_time.minute}:",
             choose_tasks_for_current_window(
-                task_group_id="tg_stacks",
+                task_group_id="tg_freshness_monitoring",
+                task_to_trigger_prefix="run_dbt_freshness",
                 list_of_tasks=list_of_stacks,
                 minutes_per_window=minutes_per_window,
                 cycle_duration_mins=cycle_duration_mins,
@@ -139,7 +155,27 @@ if __name__ == "__main__":
         print(
             f"Selected stacks for {minutes_per_window} min window at minute {test_override_time.minute}:",
             choose_tasks_for_current_window(
-                task_group_id="tg_stacks",
+                task_group_id="tg_freshness_monitoring",
+                task_to_trigger_prefix="run_dbt_freshness",
+                list_of_tasks=list_of_stacks,
+                minutes_per_window=minutes_per_window,
+                cycle_duration_mins=cycle_duration_mins,
+                test_time=test_override_time,
+            ),
+        )
+
+    print("")
+    minutes_per_window = 60
+    cycle_duration_mins = 60
+    print(f"Selected stacks for cycle duration: {cycle_duration_mins} and mins per window: {minutes_per_window}")
+
+    for minute in [minutes_per_window * i for i in range(0, 60 // minutes_per_window)]:
+        test_override_time = datetime(2022, 1, 1, 15, minute)
+        print(
+            f"Selected stacks for {minutes_per_window} min window at minute {test_override_time.minute}:",
+            choose_tasks_for_current_window(
+                task_group_id="tg_freshness_monitoring",
+                task_to_trigger_prefix="run_dbt_freshness",
                 list_of_tasks=list_of_stacks,
                 minutes_per_window=minutes_per_window,
                 cycle_duration_mins=cycle_duration_mins,

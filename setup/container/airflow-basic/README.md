@@ -8,6 +8,10 @@
 
 SequentialExecutor will only allow 1 task at a time to execute.
 
+## Gotchas
+
+- If DAG runs but no task run, check the start date is in past
+
 
 ## Before you Begin
 
@@ -108,6 +112,8 @@ sqlite3 /opt/airflow/airflow.db
 
 ## Deploy DAGS
 
+NOTE: DAGs with the having the same task Id migh
+
 Optionally, remove all DAGs first:
 
 ```SH
@@ -127,9 +133,16 @@ docker cp dags/dynamic_window_task_execution_12am.py $AIRFLOW_CONTAINER:/opt/air
 docker cp dags/common_tasks.py $AIRFLOW_CONTAINER:/opt/airflow/dags
 docker cp dags/utils/scheduling_utils.py $AIRFLOW_CONTAINER:/opt/airflow/dags
 
+docker exec $AIRFLOW_CONTAINER mkdir -p /opt/airflow/dags/orchestrations/utils/
+docker cp dags/orchestrations/dynamic_window_task_execution_multi_task_v2_5.py $AIRFLOW_CONTAINER:/opt/airflow/dags/orchestrations/dynamic_window_task_execution_multi_task_v2_5.py
+docker cp dags/orchestrations/utils/scheduling_utils.py $AIRFLOW_CONTAINER:/opt/airflow/dags/orchestrations/utils/scheduling_utils.py
+docker cp dags/orchestrations/utils/__init__.py $AIRFLOW_CONTAINER:/opt/airflow/dags/orchestrations/utils/__init__.py
+
 Copy all DAGs in dir:
 
+```SH
 docker cp dags/*.py $AIRFLOW_CONTAINER:/opt/airflow/dags
+```
 
 Copy all dags (run from parent dir):
 
@@ -139,6 +152,7 @@ Just copy the whole dags dir:
 
 ```SH
 docker cp dags $AIRFLOW_CONTAINER:/opt/airflow/
+docker cp dags/orchestrations $AIRFLOW_CONTAINER:/opt/airflow/dags/orchestrations
 ```
 
 docker cp ../../../../dags $AIRFLOW_CONTAINER:/opt/airflow/

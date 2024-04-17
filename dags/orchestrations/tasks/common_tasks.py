@@ -94,7 +94,7 @@ def create_common_tasks(dag):
 
         # Create tasks for each stack
         for stack in list_of_stacks:
-            with TaskGroup(f"tg_{stack.replace(' ', '_')}") as tg_stack_tasks:
+            with TaskGroup(f"tg_{stack.replace(' ', '_')}"):
                 task1 = PythonOperator(
                     task_id=f"task_{stack.replace(' ', '_')}_first_task",
                     python_callable=first_task,
