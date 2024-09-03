@@ -2,7 +2,7 @@
 
 ## Start
 
-Spin up one of the environments in /setup
+Spin up one of the environments in /setup.
 
 
 ## Install build pre-reqs
