@@ -11,59 +11,64 @@ def choose_tasks_for_current_window(**kwargs):
     logging.basicConfig(level=logging.INFO)
     from datetime import datetime
 
-    task_group_id = kwargs.get("task_group_id")
-    task_to_trigger_prefix = kwargs.get("task_to_trigger_prefix")
-    list_of_tasks = kwargs.get("list_of_tasks")
-    minutes_per_window = kwargs.get("minutes_per_window")
-
-    logging.info(f"minutes_per_window: {minutes_per_window}")
-
-    # Duration before re-starting the cycle (before starting back at first task in the list).
-    # E.g. if you want to schedule each task twice per hour, set this to 30.
-    # Setting 60 will schedule each task once per hour
-    cycle_duration_mins = kwargs.get("cycle_duration_mins", 60)
-
-    # For testing, allows overriding the execution_date
-    test_time = kwargs.get("test_time")
-
-    # Use test_time if provided, else extract the execution_date from the context
-    if test_time and isinstance(test_time, datetime):
-        execution_date = test_time
-    else:
-        execution_date = kwargs.get("execution_date")
-
-    if not execution_date:
-        raise ValueError("execution_date not found in context")
-
-    logging.info(f"execution_date: {execution_date}")
-
-    # Validate that minutes_per_window is provided and is a valid number
-    if not minutes_per_window or minutes_per_window <= 0:
-        raise ValueError("Invalid or missing 'minutes_per_window'. It must be a positive number.")
-
-    # Validate cycle_duration_mins
-    if not cycle_duration_mins or cycle_duration_mins <= 0:
-        raise ValueError("Invalid or missing 'cycle_duration_mins'. It must be a positive number.")
-
-    # Calculate the number of windows based on the total minutes for windows and window duration
-    number_of_windows = cycle_duration_mins // minutes_per_window
-
-    # Ensure the total minutes for windows divides evenly into the specified windows; adjust logic if it does not
-    if cycle_duration_mins % minutes_per_window != 0:
-        raise ValueError("The total minutes for windows does not divide evenly by the minutes per window.")
-
-    # Calculate the window index based on execution_date's minute within the cycle
-    window_index = (execution_date.minute // minutes_per_window) % number_of_windows
-    tasks_for_current_window = list(divide_tasks_into_windows(list_of_tasks, number_of_windows))[window_index]
-
     task_ids_to_run = []
-    for task_name in tasks_for_current_window:
-        task_id = (
-            f"{task_group_id}.tg_{task_name.replace(' ', '_')}.{task_to_trigger_prefix}{task_name.replace(' ', '_')}"
-        )
-        task_ids_to_run.append(task_id)
 
-    return task_ids_to_run
+    try:
+        task_group_id = kwargs.get("task_group_id")
+        task_to_trigger_prefix = kwargs.get("task_to_trigger_prefix")
+        list_of_tasks = kwargs.get("list_of_tasks")
+        minutes_per_window = kwargs.get("minutes_per_window")
+        # minutes_per_window = int(minutes_per_window)
+
+        logging.info(f"minutes_per_window: {minutes_per_window}")
+
+        # Duration before re-starting the cycle (before starting back at first task in the list).
+        # E.g. if you want to schedule each task twice per hour, set this to 30.
+        # Setting 60 will schedule each task once per hour
+        cycle_duration_mins = kwargs.get("cycle_duration_mins", 60)
+
+        # For testing, allows overriding the execution_date
+        test_time = kwargs.get("test_time")
+
+        # Use test_time if provided, else extract the execution_date from the context
+        if test_time and isinstance(test_time, datetime):
+            execution_date = test_time
+        else:
+            execution_date = kwargs.get("execution_date")
+
+        if not execution_date:
+            raise ValueError("execution_date not found in context")
+
+        logging.info(f"execution_date: {execution_date}")
+
+        # Validate that minutes_per_window is provided and is a valid number
+        if not minutes_per_window or minutes_per_window <= 0:
+            raise ValueError("Invalid or missing 'minutes_per_window'. It must be a positive number.")
+
+        # Validate cycle_duration_mins
+        if not cycle_duration_mins or cycle_duration_mins <= 0:
+            raise ValueError("Invalid or missing 'cycle_duration_mins'. It must be a positive number.")
+
+        # Calculate the number of windows based on the total minutes for windows and window duration
+        number_of_windows = cycle_duration_mins // minutes_per_window
+
+        # Ensure the total minutes for windows divides evenly into the specified windows; adjust logic if it does not
+        if cycle_duration_mins % minutes_per_window != 0:
+            raise ValueError("The total minutes for windows does not divide evenly by the minutes per window.")
+
+        # Calculate the window index based on execution_date's minute within the cycle
+        window_index = (execution_date.minute // minutes_per_window) % number_of_windows
+        tasks_for_current_window = list(divide_tasks_into_windows(list_of_tasks, number_of_windows))[window_index]
+
+        for task_name in tasks_for_current_window:
+            task_id = f"{task_group_id}.tg_{task_name.replace(' ', '_')}.{task_to_trigger_prefix}{task_name.replace(' ', '_')}"
+            task_ids_to_run.append(task_id)
+
+        return task_ids_to_run
+
+    except Exception as e:
+        logging.error(f"Error occurred: {e}")
+        return task_ids_to_run
 
 
 # Testing

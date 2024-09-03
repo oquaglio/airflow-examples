@@ -2,7 +2,7 @@
 
 ## Start
 
-Spin up one of the environments in /setup
+Spin up one of the environments in /setup.
 
 
 ## Install build pre-reqs
@@ -11,10 +11,13 @@ Fedora:
 
 Try this first:
 
+```SH
 sudo dnf update -y && dnf install -y @development-tools
+```
 
 More stuff:
 
+```SH
 sudo dnf update -y && \
     dnf install -y \
     wget \
@@ -39,7 +42,7 @@ sudo dnf update -y && \
     procps-ng \
     sqlite sqlite-devel \
     && dnf clean all
-
+```
 
 ## Setup local testing virual env
 
@@ -57,4 +60,4 @@ pip install "apache-airflow[postgres]==${AIRFLOW_VERSION}" --constraint ../../se
 
 ## Now run the dags
 
-python dag.py
+>python dag.py
